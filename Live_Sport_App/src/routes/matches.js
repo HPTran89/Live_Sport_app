@@ -18,7 +18,7 @@ matchRouter.get("/", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({
       error: "Invalid query",
-      details: JSON.stringify(parsed.error),
+      details: parsed.error.issues,
     });
   }
 
@@ -41,15 +41,17 @@ matchRouter.get("/", async (req, res) => {
 
 matchRouter.post("/", async (req, res) => {
   const parsed = await createMatchSchema.safeParseAsync(req.body);
-  const {
-    data: { startTime, endTime, homeScore, awayScore },
-  } = parsed;
+
   if (!parsed.success) {
     return res.status(400).json({
       error: "Invalid Payload",
-      details: JSON.stringify(parsed.error),
+      details: parsed.error.issues,
     });
-  }
+  }  
+  // can only descructure once we know there is something to descructure, which is after the validation check
+  const {
+    data: { startTime, endTime, homeScore, awayScore },
+  } = parsed;
 
   console.log("Creating match with data:", parsed.data);
 
@@ -71,7 +73,6 @@ matchRouter.post("/", async (req, res) => {
   } catch (err) {
     res.status(500).json({
       error: "Failed to create match",
-      details: JSON.stringify(err),
     });
   }
 });
