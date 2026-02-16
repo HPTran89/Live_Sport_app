@@ -1,10 +1,12 @@
 import express from 'express';
-import { eq } from 'drizzle-orm';
-import { db } from './db/db.js';
+import { attachWebSocketServer } from  './ws/server.js';
 import { matchRouter } from './routes/matches.js';
+import http from 'http';
 
+const PORT = Number(process.env.PORT) || 8000;
+const HOST = process.env.HOST || "0.0.0.0";
 const app = express();
-const PORT = process.env.PORT || 8000;
+const server = http.createServer(app);
 
 app.use(express.json()); // Middleware to parse JSON bodies
 
@@ -12,10 +14,22 @@ app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
 
-app.use('/matches', matchRouter);
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+
+app.use('/matches', matchRouter)
+
+// eplicitly import and attach the WebSocket server
+const { broadcastMatchCreated } = attachWebSocketServer(server);
+app.locals.broadcastMatchCreated = broadcastMatchCreated; //  app.locals is a convenient place to store global variables or functions that can be accessed in routes and middleware.
+
+
+server.listen(PORT, HOST, (error) => {
+  if (error) {
+    return console.error('Error starting server:', error);
+  }
+  const baseUrl = HOST === '0.0.0.0' ? `http://localhost:${PORT}` : `http://${HOST}:${PORT}`;
+  console.log(`Server is running on ${baseUrl}`);
+  console.log(`WeSocket Server is running on ${baseUrl.replace('http', 'ws')}/ws`);
 });
 
 // async function main() {

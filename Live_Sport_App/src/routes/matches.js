@@ -28,7 +28,7 @@ matchRouter.get("/", async (req, res) => {
     const data = await db
       .select()
       .from(matches)
-      .orderBy((desc(matches.createdAt)))
+      .orderBy(desc(matches.createdAt))
       .limit(limit);
     res.json({ data });
   } catch (err) {
@@ -47,7 +47,7 @@ matchRouter.post("/", async (req, res) => {
       error: "Invalid Payload",
       details: parsed.error.issues,
     });
-  }  
+  }
   // can only descructure once we know there is something to descructure, which is after the validation check
   const {
     data: { startTime, endTime, homeScore, awayScore },
@@ -69,6 +69,12 @@ matchRouter.post("/", async (req, res) => {
         status: getMatchStatus(startTime, endTime),
       })
       .returning();
+
+    // broadcast the new match to all connected WebSocket clients
+    if (res.app.locals.broadcastMatchCreated) {
+      // push new match data to all of the clients that are currently connected to the WebSocket server
+      res.app.locals.broadcastMatchCreated(event); 
+    }
     res.status(201).json({ data: event });
   } catch (err) {
     res.status(500).json({
