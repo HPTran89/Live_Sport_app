@@ -22,11 +22,23 @@ export function attachWebSocketServer(server) {
     });
 
     wss.on('connection', (socket) => {
-        console.log('New WebSocket connection established');
-        sendJson(socket, { type: "welcome", message: "Welcome to the WebSocket server!" });
+        socket.isAlive = true;
+        socket.on('pong', () => socket.isAlive = true);
 
+        sendJson(socket, { type: "welcome", message: "Welcome to the WebSocket server!" });
         socket.on("error", console.error);
     });
+
+    // implementing a heartbeat mechanism to detect and close dead connections
+    const interval = setInterval(() => {
+        wss.clients.forEach((ws) => {
+            if(ws.isAlive === false )return ws.terminate();
+            ws.isAlive = false;
+            ws.ping();
+        })
+    }, 30000);
+
+    wss.on('close', () => clearInterval(interval));
     
     function broadcastMatchCreated(match) {
         broadcast(wss, { type: "match_created", data: match });
