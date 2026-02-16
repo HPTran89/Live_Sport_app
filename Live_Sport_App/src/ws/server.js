@@ -1,4 +1,5 @@
 import { WebSocket, WebSocketServer } from "ws";
+import { wsArcjet } from "../arcjet.js";
 
 // sending a JSON object to a specific client
 function sendJson(socket, payload) {
@@ -14,6 +15,7 @@ function broadcast(wss, payload) {
     }
 }
 
+// this function will be imported and called in src/index.js to attach the WebSocket server to our existing HTTP server
 export function attachWebSocketServer(server) {
     const wss = new WebSocketServer({ 
         server, // no need to specify the port, it will use the same as the HTTP server
@@ -21,7 +23,22 @@ export function attachWebSocketServer(server) {
         maxPayload: 1024 * 1024, // 1MB
     });
 
-    wss.on('connection', (socket) => {
+    wss.on('connection', async (socket, req) => {
+        if(wsArcjet) {
+            try {
+                const decision = await wsArcjet.protect(req);
+                if(decision.isDenied()) {
+                    const code = decision.reason.isRateLimit() ? 1013 : 1008; // 1013: Try Again Later, 1008: Policy Violation
+                    const reason = decision.reason.isRateLimit() ? "Too Many Requests" : "Forbidden";
+                    socket.close(code, reason);
+                    return;
+                }
+            } catch (err) {
+                console.error("Arcjet WebSocket protection error:", err);
+                socket.close(1011,"server security error");
+                return;
+            }
+        }
         socket.isAlive = true;
         socket.on('pong', () => socket.isAlive = true);
 
