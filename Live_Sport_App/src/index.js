@@ -1,7 +1,9 @@
+import 'dotenv/config';
 import express from 'express';
 import { attachWebSocketServer } from  './ws/server.js';
 import { matchRouter } from './routes/matches.js';
 import http from 'http';
+import { securityMiddleware } from './arcjet.js';
 
 const PORT = Number(process.env.PORT) || 8000;
 const HOST = process.env.HOST || "0.0.0.0";
@@ -15,7 +17,7 @@ app.get('/', (req, res) => {
 });
 
 
-
+app.use(securityMiddleware()); // Apply Arcjet security middleware globally to all routes
 app.use('/matches', matchRouter)
 
 // eplicitly import and attach the WebSocket server
